@@ -1,0 +1,66 @@
+{
+  "input_settings": {
+    "input_source": 0,
+    "fps": 30,
+    "frame_width": 1280,
+    "frame_height": 720,
+    "create_output": true,
+    "frame_divider": 6,
+    "output_settings": {
+      "output_path": ""
+    }
+  },
+  "obstacle_detection_settings": {
+    "draw_zones": true,
+    "distance_algorithm": {
+      "class_dimensions": {
+        "bench": 43,
+        "bicycle": 100,
+        "bin": 70,
+        "bus": 300,
+        "car": 160,
+        "cone": 60,
+        "crosswalk": 300,
+        "door": 200,
+        "fire-hydrant": 70,
+        "motorbike": 100,
+        "person": 167,
+        "pole": 30,
+        "ramp": 100,
+        "stairs": 100,
+        "stop-sign": 50,
+        "tree": 250,
+        "tree-body": 40,
+        "truck": 350
+      }
+    },
+    "zone_settings": {
+      "green_roi": {
+        "x1": 0.1,
+        "y1": 0,
+        "x2": 0.8,
+        "y2": 1
+      },
+      "yellow_roi": {
+        "x1": 0.2,
+        "y1": 0,
+        "x2": 0.6,
+        "y2": 1
+      },
+      "red_roi": {
+        "x1": 0.3,
+        "y1": 0,
+        "x2": 0.4,
+        "y2": 1
+      }
+    }
+  },
+  "translation_settings": {
+    "tr_to_en": {
+      "model_name": "Helsinki-NLP/opus-mt-tr-en"
+    },
+    "en_to_tr": {
+      "model_name": "Helsinki-NLP/opus-mt-en-tr"
+    }
+  }
+}
