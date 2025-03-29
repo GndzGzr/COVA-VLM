@@ -19,14 +19,16 @@ def create_app():
     button_model = YOLO("/code/bestLR.pt")
     fingertip_model = YOLO("/code/finger_detector.pt")
     WA_model = YOLO("/code/WA_model.pt")
+    pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
     """
+    local working settings 
+    
     button_model = YOLO("/Users/dogukanaytekin/PycharmProjects/AtmApp/models/bestLR.pt")
     fingertip_model = YOLO("/Users/dogukanaytekin/PycharmProjects/AtmApp/models/finger_detector.pt")
     WA_model = YOLO("/Users/dogukanaytekin/PycharmProjects/AtmApp/models/WA_model.pt")
-    """
-
     pytesseract.pytesseract.tesseract_cmd = '/opt/homebrew/bin/tesseract'
+    """
 
     @app.route('/ATMpredict', methods=['POST'])
     def ATMpredict():
