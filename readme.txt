@@ -1,4 +1,4 @@
-If you don't have Nvidia-container-toolkit , CUDA , cudnn on computer you can change the dockerfile with this:
+If you don't have Nvidia-container-toolkit , CUDA , cudnn on computer you can change the dockerfile with this and create container without gpu usage:
 
 # Python 3.11 tabanlı bir imaj kullan
 FROM python:3.11
