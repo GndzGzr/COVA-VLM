@@ -53,7 +53,6 @@ def detect_fingertip(img, fingertip_model):
         return None
 
 def produce_output(img, button_model, fingertip_model):
-
     results = button_model(img, save=False)
 
     try:
@@ -84,7 +83,7 @@ def produce_output(img, button_model, fingertip_model):
             matched_label = get_best_match(ocr_text)
 
             if matched_label == "Bilinmeyen İslem":
-                if box.cls == torch.tensor([1.]):
+                if box.cls.item() == 1:
                     matched_label = "Parmağınızı sola kaydırıp tekrar deneyin."
                 else:
                     matched_label = "Parmağınızı sağa kaydırıp tekrar deneyin."

@@ -27,7 +27,7 @@ class ObstacleDetection:
 
         for det in detections.boxes:
             # Bounding box coordinates
-            x1, y1, x2, y2 = map(int, det.xyxy[0])  # Convert to integers
+            x1, y1, x2, y2 = map(int, det.xyxy[0].cpu().numpy())  # Convert to integers
             conf = det.conf[0]  # Confidence score
             cls = int(det.cls[0])  # Class ID
             class_name = self.model.names[cls]  # Class name
@@ -63,7 +63,7 @@ class ObstacleDetection:
 
         for det in detections.boxes:
             # Bounding box coordinates
-            x1, y1, x2, y2 = map(int, det.xyxy[0])  # Convert to integers
+            x1, y1, x2, y2 = map(int, det.xyxy[0].cpu().numpy())  # Convert to integers
             conf = det.conf[0]  # Confidence score
             cls = int(det.cls[0])  # Class ID
             class_name = self.model.names[cls]  # Class name

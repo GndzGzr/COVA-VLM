@@ -29,7 +29,7 @@ class DistanceAlgorithm:
                                                             'real_size': 50})
         real_size = class_info['real_size']
 
-        x1, y1, x2, y2 = map(int, det.xyxy[0])  # Convert to integers
+        x1, y1, x2, y2 = map(int, det.xyxy[0].cpu().numpy())  # Convert to integers
         pixel_size = 0
         if class_info['dimension'] == 'width':
             pixel_size = x2 - x1
