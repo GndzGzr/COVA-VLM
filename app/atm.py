@@ -1,5 +1,4 @@
 import pytesseract
-import torch
 import difflib
 import cv2
 
