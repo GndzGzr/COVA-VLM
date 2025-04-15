@@ -1,7 +1,7 @@
 for build dockerfile with cpu :
 
 docker build -f Dockerfile.cpu -t visualassistantcpu .   
-docker run -p 8000:8000 visualassistantcpu 
+docker run -p 8000:8000 --name visualassistancpucontainer visualassistantcpu 
 
 for build dockerfile with gpu :
 docker build -t atm-image .
