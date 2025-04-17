@@ -22,6 +22,7 @@ def create_app():
         device = torch.device('cpu')
         device_name = 'cpu'
 
+
     button_model = YOLO("/code/bestLR.pt").to(device)
     fingertip_model = YOLO("/code/finger_detector.pt").to(device)
     WA_model = YOLO("/code/WA_model.pt").to(device)
@@ -42,7 +43,9 @@ def create_app():
     button_model(dummy_image)
     fingertip_model(dummy_image)
     WA_model(dummy_image)
-
+    @app.route('/')
+    def home():
+        return "Sistem başarıyla başlatıldı." , 200
     @app.route('/ATMpredict', methods=['POST'])
     def ATMpredict():
 
@@ -80,4 +83,4 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(port=3000, debug=True)
+    app.run(port=8000, debug=True)
