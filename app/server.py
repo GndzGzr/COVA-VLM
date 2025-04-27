@@ -4,9 +4,9 @@ from flask import Flask, request, jsonify
 from ultralytics import YOLO
 import pytesseract
 import torch
-from VLM.vlm_model import VisionLanguageModel
-from Obstacle_Detection.Obstacle_Detection import ObstacleDetection
-from atm import produce_output
+from .VLM.vlm_model import VisionLanguageModel
+from .Obstacle_Detection.Obstacle_Detection import ObstacleDetection
+from .atm import produce_output
 
 button_model = None
 fingertip_model = None

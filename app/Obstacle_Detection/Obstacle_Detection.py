@@ -1,7 +1,7 @@
 import cv2
 
-from Obstacle_Detection.DistanceAlgorithm import DistanceAlgorithm
-from Obstacle_Detection.Zone import Zone
+from .DistanceAlgorithm import DistanceAlgorithm
+from .Zone import Zone
 import json
 
 
