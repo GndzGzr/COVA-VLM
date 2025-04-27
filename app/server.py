@@ -4,16 +4,18 @@ from flask import Flask, request, jsonify
 from ultralytics import YOLO
 import pytesseract
 import torch
+from app.VLM.vlm_model import VisionLanguageModel
 from app.Obstacle_Detection.Obstacle_Detection import ObstacleDetection
 from app.atm import produce_output
 
 button_model = None
 fingertip_model = None
 WA_model = None
+VLM_model = None
 def create_app():
     app = Flask(__name__)
 
-    global button_model, fingertip_model , WA_model
+    global button_model, fingertip_model , WA_model, VLM_model
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -26,6 +28,7 @@ def create_app():
     button_model = YOLO("/code/bestLR.pt").to(device)
     fingertip_model = YOLO("/code/finger_detector.pt").to(device)
     WA_model = YOLO("/code/WA_model.pt").to(device)
+    VLM_model = VisionLanguageModel()
     pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
     """
@@ -60,22 +63,40 @@ def create_app():
         result = produce_output(image, button_model, fingertip_model)
 
         return jsonify({'result': result, 'device': device_name})
+    
+    @app.route('/VLMpredict', methods=['POST'])
+    def VLMpredict():
+        data = request.get_json()
+        if 'image_bytes' not in data or 'question' not in data:
+            return jsonify({'error': 'Image bytes or question not provided'}), 400
+
+        file_bytes = np.frombuffer(bytearray(data['image_bytes']), np.uint8)
+        image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        question = data['question']
+
+        # Use the VLM model in chat mode
+        result = VLM_model(image, question, mode="chat")
+
+        return jsonify({'result': result, 'device': device_name})
 
     @app.route('/WApredict', methods=['POST'])
     def WApredict():
-
         data = request.get_json()
         if 'image_bytes' not in data:
             return jsonify({'error': 'No image bytes provided'}), 400
 
+        question = data.get('question', "What should I do next?")
         file_bytes = np.frombuffer(bytearray(data['image_bytes']), np.uint8)
-
         image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
+        # Get detected objects from ObstacleDetection
         obstacle_detection_object = ObstacleDetection()
-        message = obstacle_detection_object.produce_output(image, WA_model)
+        objects_list = obstacle_detection_object.produce_output(image, WA_model)
+        
+        # Use the VLM model in walking assistance mode
+        result = VLM_model(image, question, objects_list, mode="walking assistance")
 
-        return jsonify({'result': message , 'device':device_name})
+        return jsonify({'result': result, 'device': device_name})
 
     return app
 

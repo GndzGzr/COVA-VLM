@@ -1,12 +1,14 @@
 import cv2
-from app.Obstacle_Detection.DistanceAlgorithm import DistanceAlgorithm
-from app.Obstacle_Detection.Zone import Zone
+
+from Obstacle_Detection.DistanceAlgorithm import DistanceAlgorithm
+from Obstacle_Detection.Zone import Zone
 import json
+
 
 class ObstacleDetection:
 
     def __init__(self):
-        json_file = open('/code/app/Obstacle_Detection/settings.json')
+        json_file = open('Obstacle_Detection/settings.json')
         jsonFileData = json.load(json_file)
         inputSettings = jsonFileData["input_settings"]
         settings = jsonFileData["obstacle_detection_settings"]
@@ -27,7 +29,7 @@ class ObstacleDetection:
 
         for det in detections.boxes:
             # Bounding box coordinates
-            x1, y1, x2, y2 = map(int, det.xyxy[0].cpu().numpy())  # Convert to integers
+            x1, y1, x2, y2 = map(int, det.xyxy[0])  # Convert to integers
             conf = det.conf[0]  # Confidence score
             cls = int(det.cls[0])  # Class ID
             class_name = self.model.names[cls]  # Class name
@@ -61,21 +63,51 @@ class ObstacleDetection:
         min_distance = float('inf')
         closest_object_text = ""
 
+        objects_list = []
+
         for det in detections.boxes:
             # Bounding box coordinates
-            x1, y1, x2, y2 = map(int, det.xyxy[0].cpu().numpy())  # Convert to integers
+            x1, y1, x2, y2 = map(int, det.xyxy[0])  # Convert to integers
             conf = det.conf[0]  # Confidence score
             cls = int(det.cls[0])  # Class ID
             class_name = self.model.names[cls]  # Class name
+
 
             color = self.zone.get_bbox_color((x1, y1, x2, y2))
 
             if color:
                 distance = self.distanceAlgorithm.calculate(det, class_name)
+                distance_m = distance / 100
+
+                if color == (0, 0, 255):  # Kırmızı alan
+                    if distance_m < 1.5:
+                        danger = "Red"
+                    elif distance_m <= 3:
+                        danger = "Yellow"
+                    else:
+                        danger = "Yellow"
+                elif color == (0, 255, 255):  # Sarı alan
+                    if distance_m < 1.5:
+                        danger = "Yellow"
+                    else:
+                        danger = "Green"
+                elif color == (0, 255, 0):  # Yeşil alan
+                    if distance_m < 1.5:
+                        danger = "Yellow"
+                    else:
+                        danger = "Green"
+                else:
+                    danger = "Unknown"
+
+                objects_list.append({
+                    "Object": class_name,
+                    "Distance": round(distance_m, 2),
+                    "Danger": danger
+                })
 
                 # Update the closest object text if the distance is smaller
                 if distance < min_distance:
                     min_distance = distance
-                    closest_object_text = f"{round(distance / 100)} metre önünde {class_name} var"
+                    closest_object_text = f"{round(distance_m)} metre önünde {class_name} var"
 
-        return closest_object_text
+        return objects_list
