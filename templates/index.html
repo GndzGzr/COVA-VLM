@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Assistant API Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .form-container {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type="file"] {
+            padding: 10px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .results-container {
+            display: none;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .image-preview {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .image-preview img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 4px;
+        }
+        .result-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .result-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            overflow-x: auto;
+            border-radius: 4px;
+        }
+        .error {
+            color: #D8000C;
+            background-color: #FFD2D2;
+            padding: 10px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Visual Assistant API Demo</h1>
+    
+    <div class="container">
+        <div class="form-container">
+            <form id="apiForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="api_url">API URL:</label>
+                    <input type="text" id="api_url" name="api_url" value="http://localhost:8000" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="file">Upload Image:</label>
+                    <input type="file" id="file" name="file" accept="image/*" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mode">API Mode:</label>
+                    <select id="mode" name="mode">
+                        <option value="all">All APIs</option>
+                        <option value="atm">ATM Prediction</option>
+                        <option value="vlm">Vision Language Model</option>
+                        <option value="walking">Walking Assistance</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="question">Question (for VLM and Walking Assistance):</label>
+                    <textarea id="question" name="question" rows="3">What can you see in this image?</textarea>
+                </div>
+                
+                <button type="submit">Submit</button>
+            </form>
+        </div>
+        
+        <div id="resultsContainer" class="results-container">
+            <h2>Results</h2>
+            
+            <div class="image-preview">
+                <h3>Uploaded Image</h3>
+                <img id="previewImage" src="" alt="Uploaded image">
+            </div>
+            
+            <div id="atmResults" class="result-section" style="display: none;">
+                <div class="result-title">ATM Prediction Results</div>
+                <div id="atmContent"></div>
+            </div>
+            
+            <div id="vlmResults" class="result-section" style="display: none;">
+                <div class="result-title">Vision Language Model Results</div>
+                <div id="vlmContent"></div>
+            </div>
+            
+            <div id="walkingResults" class="result-section" style="display: none;">
+                <div class="result-title">Walking Assistance Results</div>
+                <div id="walkingContent"></div>
+            </div>
+            
+            <div id="errorContainer" class="error" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('apiForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            document.querySelector('button[type="submit"]').textContent = 'Processing...';
+            document.querySelector('button[type="submit"]').disabled = true;
+            
+            // Hide previous results
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('atmResults').style.display = 'none';
+            document.getElementById('vlmResults').style.display = 'none';
+            document.getElementById('walkingResults').style.display = 'none';
+            document.getElementById('errorContainer').style.display = 'none';
+            
+            // Get form data
+            const formData = new FormData(this);
+            
+            // Send API request
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reset button
+                document.querySelector('button[type="submit"]').textContent = 'Submit';
+                document.querySelector('button[type="submit"]').disabled = false;
+                
+                // Show results container
+                document.getElementById('resultsContainer').style.display = 'block';
+                
+                // Set image preview
+                document.getElementById('previewImage').src = `/uploads/${data.filepath}`;
+                
+                // Display results for each API
+                if (data.results.atm) {
+                    document.getElementById('atmResults').style.display = 'block';
+                    if (data.results.atm.error) {
+                        document.getElementById('atmContent').innerHTML = `<div class="error">${data.results.atm.error}</div>`;
+                    } else {
+                        document.getElementById('atmContent').innerHTML = `<pre>${JSON.stringify(data.results.atm, null, 2)}</pre>`;
+                    }
+                }
+                
+                if (data.results.vlm) {
+                    document.getElementById('vlmResults').style.display = 'block';
+                    if (data.results.vlm.error) {
+                        document.getElementById('vlmContent').innerHTML = `<div class="error">${data.results.vlm.error}</div>`;
+                    } else {
+                        document.getElementById('vlmContent').innerHTML = `<pre>${JSON.stringify(data.results.vlm, null, 2)}</pre>`;
+                    }
+                }
+                
+                if (data.results.walking) {
+                    document.getElementById('walkingResults').style.display = 'block';
+                    if (data.results.walking.error) {
+                        document.getElementById('walkingContent').innerHTML = `<div class="error">${data.results.walking.error}</div>`;
+                    } else {
+                        document.getElementById('walkingContent').innerHTML = `<pre>${JSON.stringify(data.results.walking, null, 2)}</pre>`;
+                    }
+                }
+            })
+            .catch(error => {
+                // Reset button
+                document.querySelector('button[type="submit"]').textContent = 'Submit';
+                document.querySelector('button[type="submit"]').disabled = false;
+                
+                // Show error
+                document.getElementById('resultsContainer').style.display = 'block';
+                document.getElementById('errorContainer').style.display = 'block';
+                document.getElementById('errorContainer').textContent = 'Error: ' + error.message;
+            });
+        });
+    </script>
+</body>
+</html> 

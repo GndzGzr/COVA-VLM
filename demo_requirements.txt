@@ -1,0 +1,5 @@
+opencv-python==4.8.1
+requests==2.31.0
+flask==3.0.0
+pillow==10.1.0
+werkzeug==3.0.1 

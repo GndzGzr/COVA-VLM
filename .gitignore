@@ -1,0 +1,33 @@
+# Virtual environments
+.venv
+venv/
+ENV/
+env/
+
+# IDE and editor folders
+.idea
+.vscode
+*.swp
+*.swo
+
+# Python bytecode files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyw
+*.pyz
+*.pyzw
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Local development settings
+.env
+.env.local
+
+# Log files
+*.log
