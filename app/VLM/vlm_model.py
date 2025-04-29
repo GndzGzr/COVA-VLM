@@ -2,6 +2,7 @@ from typing import Union, Optional, List, Dict, Any
 from PIL import Image
 import torch
 import os
+import gc  # Add garbage collector
 
 
 try:
@@ -17,6 +18,9 @@ except ImportError:
     )
 
 class VisionLanguageModel:
+    _model_instance = None
+    _processor_instance = None
+    
     def __init__(self, model_path: str = "llava-hf/llava-1.5-7b-hf", device: str = "cuda"):
         """
         Initialize Vision-Language model (LLaVA)
@@ -24,23 +28,73 @@ class VisionLanguageModel:
             model_path: Path to the model or model name in HuggingFace hub
             device: Device to run the model on ('cuda' or 'cpu')
         """
-        self.device = "cuda" if torch.cuda.is_available() and device == "cuda" else "cpu"
-        print(self.device)
+        # Force CPU usage for the LLaVA model to prevent OOM errors
+        self.device = "cpu"  # Always use CPU for this large model
+        print(f"Using device: {self.device} for VLM model")
         
-        # Load processor and model with specific configuration
-        self.processor = AutoProcessor.from_pretrained(
-            model_path,
-            use_fast=False,  # Use slow tokenizer for better compatibility
-        )
+        # Use cached instances if available to avoid reloading
+        if VisionLanguageModel._processor_instance is None:
+            print("Loading VLM processor for the first time...")
+            VisionLanguageModel._processor_instance = AutoProcessor.from_pretrained(
+                model_path,
+                use_fast=False,  # Use slow tokenizer for better compatibility
+            )
         
-        self.model = LlavaForConditionalGeneration.from_pretrained(
-            model_path,
-            torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-            device_map="auto" if self.device == "cuda" else None,
-        )
+        if VisionLanguageModel._model_instance is None:
+            print("Loading VLM model for the first time...")
+            # Configure model for optimal performance and lower memory usage
+            torch_dtype = torch.float32  # Use float32 for CPU
+            
+            VisionLanguageModel._model_instance = LlavaForConditionalGeneration.from_pretrained(
+                model_path,
+                torch_dtype=torch_dtype,
+                device_map=None,  # Don't use auto device mapping
+                low_cpu_mem_usage=True,
+                offload_folder="offload",  # Enable model offloading
+                offload_state_dict=True,   # Offload state dict
+            )
+            
+            # Move to CPU
+            VisionLanguageModel._model_instance.to(self.device)
+                
+            # Optimize for inference
+            VisionLanguageModel._model_instance.eval()
         
-        if self.device == "cpu":
-            self.model.to(self.device)
+        self.processor = VisionLanguageModel._processor_instance
+        self.model = VisionLanguageModel._model_instance
+        
+        # Warm up the model with a small dummy input
+        self._warmup()
+        
+    def _warmup(self):
+        """Warm up the model with a dummy image and question"""
+        try:
+            # Only warm up on first initialization
+            if not hasattr(VisionLanguageModel, '_warmed_up'):
+                print("Warming up VLM model...")
+                dummy_image = Image.new('RGB', (224, 224), color='white')
+                dummy_question = "What's in this image?"
+                
+                inputs = self.processor(
+                    images=dummy_image,
+                    text=f"Human: <image>\n{dummy_question}\n\nAssistant: ",
+                    return_tensors="pt",
+                    add_special_tokens=True,
+                )
+                
+                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+                
+                with torch.no_grad():
+                    self.model.generate(**inputs, max_new_tokens=5)  # Reduced tokens for warmup
+                
+                VisionLanguageModel._warmed_up = True
+                print("VLM model warm-up complete")
+                
+                # Clean up after warmup
+                gc.collect()
+                torch.cuda.empty_cache() if torch.cuda.is_available() else None
+        except Exception as e:
+            print(f"Warning: VLM warm-up failed: {str(e)}")
 
     def generate_response(
         self, 
@@ -48,7 +102,7 @@ class VisionLanguageModel:
         question: str,
         objects: List[Dict[str, Any]] = None,
         mode: str = "chat",
-        max_new_tokens: int = 512,
+        max_new_tokens: int = 256,  # Reduced token count
         temperature: float = 0.7,
         top_p: float = 0.9,
     ) -> str:
@@ -71,6 +125,10 @@ class VisionLanguageModel:
                 image = Image.open(image).convert('RGB')
             except Exception as e:
                 raise ValueError(f"Error loading image: {str(e)}")
+        
+        # Convert CV2 image to PIL if needed
+        if not isinstance(image, Image.Image):
+            image = Image.fromarray(image[:, :, ::-1])  # BGR to RGB
         
         # Prepare inputs with explicit handling
         try:
@@ -103,7 +161,7 @@ class VisionLanguageModel:
                 add_special_tokens=True,
                 padding=True,
                 truncation=True,
-                max_length=2048  # Maximum context length for the model
+                max_length=1024  # Reduced context length from 2048 to 1024
             )
             
             # Move inputs to device
@@ -117,7 +175,7 @@ class VisionLanguageModel:
                     temperature=temperature,
                     top_p=top_p,
                     num_return_sequences=1,
-                    max_new_tokens=max_new_tokens,  # Control length of new generated tokens
+                    max_new_tokens=max_new_tokens,  # Reduced from 512 to 256
                     min_new_tokens=10,  # Ensure some minimal response
                     pad_token_id=self.processor.tokenizer.pad_token_id,
                     eos_token_id=self.processor.tokenizer.eos_token_id,
@@ -126,6 +184,7 @@ class VisionLanguageModel:
             
             # Decode response
             response = self.processor.decode(outputs[0], skip_special_tokens=True)
+            print(response)
             
             # Clean up the response
             if "Assistant:" in response:
@@ -133,9 +192,16 @@ class VisionLanguageModel:
             if "Human:" in response:
                 response = response.split("Human:", 1)[0]
                 
+            # Clean up memory
+            gc.collect()
+            torch.cuda.empty_cache() if torch.cuda.is_available() else None
+                
             return response.strip()
             
         except Exception as e:
+            # Clean up on exception
+            gc.collect()
+            torch.cuda.empty_cache() if torch.cuda.is_available() else None
             raise ValueError(f"Error processing image or generating response: {str(e)}")
 
     def __call__(self, image: Union[Image.Image, str], question: str, objects: List[Dict[str, Any]] = None, mode: str = "chat") -> str:
