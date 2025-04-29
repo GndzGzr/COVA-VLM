@@ -8,7 +8,7 @@ import json
 class ObstacleDetection:
 
     def __init__(self):
-        json_file = open('Obstacle_Detection/settings.json')
+        json_file = open('./settings.json')
         jsonFileData = json.load(json_file)
         inputSettings = jsonFileData["input_settings"]
         settings = jsonFileData["obstacle_detection_settings"]
